@@ -1,0 +1,285 @@
+---
+title: "Introdução ao Machine Learning com R"
+author: "Karlijn Willems"
+output: html_notebook
+---
+
+# Introduzindo: Machine Learning
+
+O Machine learning, em português Aprendizado de Máquina, é um ramo da ciência da computação que estuda do desenvolvimento de algoritmos que podem aprender. O conceitos relativos ao machine learning envolvem funções de apredizagem ou "modelagem preditiva", cluterização ou agrupamento e predição de padrões. Assim, essas tarefas são "aprendidas" por intermédio de observações e experimentos com os dados. Há o desejo de incluir experiência nas tarefas de machine learning que melhorem esse aprendizado. Espera-se que futuramenteo os algoritmos de machine learning possam aprender por si, sem a interferência humana no processo.
+
+Machine Learning compartilha uma infinidade de processos com disciplinas como Mineração de dados, Descobrimento de conhecimento, Inteligência Artifícial e Estatística. As aplicações de machine learning podem ser classificadas em descobrimento de conhecimento científico e aplicações comerciais, variando entre ["Rôbos Cientista"](https://www.aber.ac.uk/en/cs/research/cb/projects/robotscientist/), filtros anti-spam e sistemas de recomendação.
+
+Esse pequeno tutorial tem o intuiro de lhe introduzir ao básico de machine learning com R: nele iremos apresentar como utilizar R em união com o algoritmo de machine learning conhecido como "KNN" ou *k*-nearest neighbors.
+
+# Using R For *k*-Nearest Neighbors (KNN)
+# Utilizando R com *k*-Nearest Neighbors (KNN)
+
+O KNN ou *k*-nearest neighbors é um dos mais simples algoritmos de machine learning e é um exemplo onde o aprendizado é baseado em instâncias, ou seja, os novos dados são classificados baseados no armazenamento de instâncias rotuladas. Mais especificamente, as distâncias entre os dados armazenados e as novas instâncas são calculadas por algum tipo de métrica de similaridade. Assim, essa similaridade pode ser expressada por métricas como a distância Euclidiana, similaridade cosine ou mesmo a distância de Manhattan. Em outras palavras, o valor de similaridade entre os dados já está calculada no sistema para qualquer novo ponto de dado que será inserido no sistema. Assim, esses valores serão utilizados para a modelagem preditiva. Ressalta-se que a modelagem preditava pode ser uma classificação, definindo um rôtulo ou classe à nova instância ou uma regressão on define-se um valor a nova instância. A classificação ou a definição de um valor à nova instância dependerá, claro, de como você compôs se modelo com o KNN.
+
+O algoritmo KNN adiciona a
+
+The *k*-nearest neighbor algorithm adds to this basic algorithm that after the distance of the new point to all stored data points has been calculated, the distance values are sorted and the *k*-nearest neighbors are determined. The labels of these neighbors are gathered and a majority vote or weighted vote is used for classification or regression purposes. In other words, the higher the score for a certain data point that was already stored, the more likely that the new instance will receive the same classification as that of the neighbor. In the case of regression, the value that will be assigned to the new data point is the mean of its *k* nearest neighbors. 
+
+[Animated PPT]
+
+## Primeiro Passo. Obtenha um conjunto de dados
+
+Machine learning basicamente si inicia com a observação dos dados. Portanto, você pode conseguir seu próprio conjunto de dados ou navegando atráves de diversas fontes de dados existente.
+
+### Conjuntos de dados do R
+
+Neste tutorial iremos utilizar o conjunto de dados Iris, que é bastante conhecido na área de machine learning. Alpem disso, esse conjunto de dados já vem incluso no R, logo, basta apenas digitar o seguinte comando para acessá-lo:
+```{r, eval = FALSE}
+iris
+```
+
+### Repositório UC Irvine de Machine Learning
+
+Caso, queira efetuar o download do conjunto de dados ao invés de utilizar o imbutido no R, você pode ir ao [Repositório UC Irvine de Machine Learning](http://archive.ics.uci.edu/ml/) e buscar pelo conjunto de dados Iris.
+
+** Dica: não apenas busque pela pasta dos dados do conjunto Iris, mas também dê uma olhada na descrição dos dados!**
+
+Então, para carregar os dados, basta utilizar este comando:
+```{r, eval = FALSE}
+iris <- read.csv(url("http://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"), header = FALSE) 
+```
+O comando lerá o arquivo .csv ou "Comma Separated Value" do site. O argumento `header` foi definido como `FALSE`, o que significa que o conjunto de dados dessa finte não disporá de um cabeçalho aos dados.
+
+Ao invés de um cabeçalho, você irá se depará com nomes de coluna como "V1" ou "V2". Esse valores são definidos aleatoriamente. Portanto, para simplificar o trabalho com o conjunto de dados uma excelente ideia é definir seu próprio cabeçalho: o que pode ser feito atráves da função `names()`, que possibilita definir e/ou receber nomes à um objeto. A função irá concatenar os nomes aos atributos, conforme a definição. Para o conjunto Iriss, você pode utilizar o seguinte comando em R:
+```{r, eval = FALSE}
+names(iris) <- c("Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width", "Species")
+```
+
+## Segundo passo. Conhecendo seus dados
+
+Após carregar seus dados no RStudio, é interessante ganhar algum conhecimento de sua base de dados. Vale lembra que apenas pela obsevação e leitura você não aprenderá o suficiente.
+
+### Visão Incial do Conjunto de Dados
+
+Primeiramente, você pode ganhar algum conhecimento dos dados atráves de alguns gráficos como histogramas e boxplots.  Nesse caso, entretanto, gráficos de dispersão podem lhe dar uma ideia do que estamos a lidar: é interessante visualizar como uma variável pode ou afeta outra variável. Em outras palavras, verificar a correlação entre duas variáveis.
+
+Voccê pode fazer gráficos com o [pacote ggvis](http://www.rdocumentation.org/packages/ggvis), por examplo.
+
+**Observe**  que o primeiro passo é carregar o pacote `ggvis`:
+```{r}
+library(ggvis)
+```
+
+```{r, message = FALSE}
+iris %>% ggvis(~Sepal.Length, ~Sepal.Width, fill = ~Species) %>% layer_points()
+```
+Assim, você a existência de uma grande correlação entre o tamanho da sepal e a largura da sepal das flores Setosa iris, enquanto a correlação é menor para as flores Virginica e Versicolor.
+
+A partir do gráfico de dispersão, onde são mapeadas a largura e o tamanho das petalas, podemos visualizar uma história similar:
+```{r, message = FALSE}
+iris %>% ggvis(~Petal.Length, ~Petal.Width, fill = ~Species) %>% layer_points()
+```
+Neste gráfico é possível obsevar a correlação positiva entre a largura e tamanho das petalas à todas as diferentes especíes inclusas em nosso conjutno de dados.
+
+**Dica: caso você esteja curioso sobre o pacote ggvis, gráficos e histogramas! De uma olhada em nosso [tutorial sobre histogramass](http://blog.datacamp.com/make-histogram-basic-r/) e/ou em [ nosso curso de ggvis](https://www.datacamp.com/courses/ggvis-data-visualization-r-tutorial).**
+
+Após um overview dos nosso dados, você pode ainda, visualizar os dados contidos no conjunto de dados, entrando com o comando
+```{r eval=FALSE}
+iris
+```
+Porém, como você observou pelo resultado desse comando, essa não é a melhor forma de inspecionar nossos dados: isso pois há uma varidade de espaços que são inseridos ao visualizá-los no console, o que de certa forma lhe impedirá de ter uma ideia clara sobre os dados. Assim, a melhor forma de inspecionar o conjunto de dados é executando o seguinte comando
+```{r, eval=FALSE}
+head(iris)
+```
+
+ou
+```{r, eval=FALSE}
+str(iris)
+```
+
+**Dica: utilize ambos comandos para visualizar as diferença entre eles!**
+
+**Observe** que o último comando irá lhe ajudar a como distinguir rapidamente os dados de tipo `num` e os três níves do atributo `Species`, que é um fator. O que é muito conveniente, pois vários classificadores de machine learning em R requerem que as caracteristicas alvo sejam codificadas como um fator.
+
+**Lembre-se**: variáveis do tipo fator representam variáveis categoricas em R. Assim, elas assumem um número limitado de diferentes valores.
+
+Uma rápida observação no atributo `Species` nos contará que a divisão das especíes de flores é de 50-50-50:
+```{r, eval=FALSE}
+table(iris$Species) 
+```
+Caso, tenha o desejo de verficar o percentual do atributo `Species`, você pode gerar uma tabela de proproções:
+```{r, eval=FALSE}
+round(prop.table(table(iris$Species)) * 100, digits = 1)
+```
+
+**Observe**: que o argumento `round` arredonda os valores do primeiro argumento, `prop.table(table(iris$Species))*100` para um número especificado de digitos, ou seja, um digito após o decimal. Caso, seja do seu interesse você pode facilmente alterar o valor do argumento `digits`.
+
+
+### Entendo profundamente seus Dados
+
+Não permanecer nessa visão alto nível do nosso conjunto de dados! O R nos da a oportunidade de avaliação ainda mais com a função `summary()`. Essa função nos retornará uma visão mais estatística dos dados, apresentando o valor mínimo e máximo; primeiro e terceiro quartís; mediana; e média para todos os dados do tipo numerico em nosso conjunto de dados. Para a variável class, o retorno será a contagem dos fatos:
+```{r, eval=TRUE, message=FALSE}
+summary(iris) 
+```
+**Dica: você pode ainda redefinir o overview do sumário, adicionando atributos especifícos ao comando apresentado acima.**
+```{r, eval=FALSE}
+summary(iris[c("Petal.Width", "Sepal.Width")])
+```
+
+Como você pode obsevar, a função `c()` é adicionada ao comando original: a coluna `petal width` e `sepal width` são concatenadas e um sumário é apresentado com apenas essas duas colunas do conjunto de dados Iris.
+
+## Terceiro Passo. Para onde ir agora?
+
+Após ter adquirido um bom entendimento sobre seus dados, você deve decidir em um caso de uso relevante para seu conjunto de dados. Em outras palavras, você deve medidar sobre o que seus dados podem lhe ensinar ou o que você acha que pode aprender com eles. Assim, tendo isso em mente podemos pensar nos tipos de algoritmos que podem ser aplicados em seu conjunto de dados no intuito de obter os resultados que desejas.
+
+**Dica: Tenha em mente que quanto mais familiarizado estiver com os dados, mais fácil será para definir o caso de uso mais apropriado ao conjunto de dados. O mesmo vale à escolha do algoritmo.**
+
+Para este tutorial, o conjunto de dados Iris será uitilizado para classificação, que é um exemplo de modelo preditivo. O último atributo do nosso conjunto dedados, `Species`, será a variável alvo, ou seja, o que queremos predizer.
+
+**Observer** que podemos ainda tomar uma classe númeral como variável alvo, caso queira utilizar o KNN para regressão.
+
+## Quarto Passo. Preparando sua Área de Trabalho
+
+Muitos dos algoritmos utilizados em machine learning não são incorporados por padrão ao R. Assim, muito provavelmente teremos que baixar os pacotes que iremos utilizar para trabalhar com machine learning.
+
+**Dica: tem uma ideia de que tipo de algoritmo de aprendizado você pode precisar, mas não tem ideia do pacote necessário? Você pode encontrar um overview completo de todos os pacotes que são utilizados em R [bem aqui](http://www.rdocumentation.org/domains/MachineLearning).** 
+
+Para ilustrar o algoritmo KNN, esse tutorial trabalha com o pacote `class`. Você pode digitar
+```{r, eval=TRUE}
+library(class)
+```
+Caso, não tenha o pacote instalado, você pode o fazer facilmente digitando o seguinte comando
+```{r, eval=FALSE}
+install.packages("<nome do pacote>")
+```
+**Não se esqueça da dica nerd**: se você não tem certeza se um pacote esta instalado, você sempre pode recorrer as esse comando para verificar"
+```{r, eval=FALSE}
+any(grepl("<nome do seu pacote>", installed.packages()))
+```
+
+## Quinto Passo. Preparando seus Dados
+
+### Normalização
+
+Como parte da preparação dos dados, você pode precisar de normalizar seus dados para que eles estejam mais consistentes. Para esse tutorial introdutório, apenas tenha em mente que a normalização facilita a aprendizagem ao algoritmo KNN. Além disso, há dois tipo de normalização:
+
+* normalização exemplo é aquela onde os ajustes são realizados individualmente por exemplo, enquanto;
+* normalização por caracteristica as correções são realizadas por cada característica, equilitáriamente, ao longo de todos os exemplos.
+
+Então, quando precisamos normalizar nosso conjunto de dados? Simplificando: quando você suspeita que os dados não são consistentes. O que você pode facilmente, através da observação dos da função `summary`. Observer os valores máximo e mínimo de todos os atributos, numéricos. Caso, veja que um atributo possui um intervalo de valores grande, será necessário a normalização. Isso significa que a distância dominará essa característica. Por exemplo, caso seu conjunto de dados possua dois atributos, X e Y, e X possui valores entre 1 e 1000, enquanto Y apenas valores entre 1 e 100, isso significa que as distâncias do atributo Y serão infunênciadas por X. Dessa forma, a normalização corrigirá problemas como esse.
+
+**Dica: volte aoo resultado do `summary(iris)` e descubra se há necessidade da normalização dos dados.**
+
+O conjunto Iriss não precisa ser normalizado: o atributo`Sepal.Length` possui valores no intervalo de 4.3 a 7.0, o atributo `Sepal.Width` valores entre 2 e 4.4, enquanto `Petal.Length` valores entre 1 e 6.9 e `Petal.Width` entre 0,1 e 2.5. Assim, todos os atributos possume valores que variam entrem 0.1 e 7.9, o que pode ser considerável aceitável.
+
+De qualquer forma, é uma boa ideia estudar a normalização e seus efeitos, especialmente se você é novo no Machine learning. Você pode executar a normalização de uma característica, simplesmente utilizando seu próprio argumento `normalize`:
+
+```{r, eval=TRUE}
+normalize <- function(x) {
+num <- x - min(x)
+denom <- max(x) - min(x)
+return (num/denom)
+}
+```
+
+Você pode ainda, utilizar esse argumento em outro comando, onde os resultados da normalização são inseridos em um data frame atráves a função `as.data.frame()`, tudo isso após a função `lapply()` retornar uma lista de mesmo tamanho do conjunto de dados informado. Assim, cada elemento dessa lista é o resultado da aplicação do argumento `normalize` no conjunto de dados utilizado:
+```{r, eval=FALSE}
+YourNormalizedDataSet <- as.data.frame(lapply(YourDataSet, normalize))
+```
+
+Para o conjunto de dados Iris, você deve ter aplicado o argumento `normalize` em quatro atributos numéricos (`Sepal.Length`, `Sepal.Width`, `Petal.Length`, `Petal.Width`), e, então inserido seus resultados em um data frame:
+```{r, eval=TRUE}
+iris_norm <- as.data.frame(lapply(iris[1:4], normalize))
+```
+
+**Dica: para uma visualização mais detalhada do efeito da normalização em um conjunto de dados, compare com o resultado do summary dos dados apresentado no segundo passo, desse tutorial:**
+```{r, eval=TRUE}
+summary(iris_norm)
+```
+
+### Conjuntos de Treinamento e Teste
+
+De maneira a avaliar a performance de seu modelo posteriormente, será necessário dividir o conjunto de dados em duas partes: um conjunto de treinamento e um conjunto de teste. O primeiro conjunto é utilizado para treinar o sistema, enquanto o segundo utilizado para avaliar o aprendizado ou o sistema de treinamento. Na prática, a divisão do seu conjunto de dados ocorre da seguinte maneira: 2/3 do conjunto original para o treinamento, enquanto os 1/3 restante ao conjunto de teste.
+
+Uma última observação em seu conjunto de dados, lhe ensinará que caso a divisão de ambos conjuntos, verá que o conjunto de treinamento contém todas espécie "Setosa" e "Versicolor", mas nenhuma "Virginica". Assim, seu modelo classificará todas as instâncias desconhecidas como "Setosa" ou "Versicolor", isso por não estar ciente das três espécies de flores. Simplificando, você receberá algumas predições incorretas no conjunto de teste.
+
+Assim, é preciso que você garanta que todas as três classes de espécies estarão presentes no modelo de treinamento. Além disso, a quantidade de instâncias de todas as três espécies precisa ser mais ou menos _similares_ para que uma ou outra classe nas suas previsões.
+
+Para fazer seus conjuntos de treinamento e teste, você primeiro estabeleceu uma semente. Este é um número de geradores de números aleatórios em R. A principal vantagem de definir uma semente é que você pode obter a mesma seqüência de números aleatórios sempre que você fornece a mesma semente no gerador de números aleatórios.
+```{r, eval=TRUE}
+set.seed(1234)
+```
+
+Como você deseja garantir que seu conjunto de dados Iris seja embaralhado e que tenha uma quantidade igual de cada espécie em seus conjuntos de treinamento e teste. Você deve utilizar a função `sample ()` para tirar uma amostra com um tamanho que é definido pelo número de linhas do conjunto de dados Iris, ou seja, 150. Então em sua amostra com substituição: você escolhe um vetor de 2 elementos e atribui 1 ou 2 para as 150 linhas do conjunto de dados Iris. A atribuição dos elementos estrá sujeita aos pesos de probabilidade de 0,67 e 0,33.
+```{r, eval=TRUE}
+ind <- sample(2, nrow(iris), replace=TRUE, prob=c(0.67, 0.33))
+```
+
+**Observe** que o argumento `replace` está definido como `TRUE`: isso significa que você definiu como 1 ou 2 uma determinada linha e então reinicializou o vetor de 2 para seu estado original. Isso significa que, para as próximas linhas em seu conjunto de dados é possível definir como 1 ou 2, para cada interação. Todavia,a probabilidade de escolher entre 1 ou 2 não pode ser proporcional aos pesos entre os item restantes, então, necessário é especificar os pesos das probabilidades.
+
+**Não se esqueça** que você deseja que seu conjunto de treinamento contenha 2/3 de seu conjunto de dados original: e, é por isso que você definiu como "1" a probabilidade de 0.67 e "2" à probabilidade de 0.33, para sua amostra de 150 linhas.
+
+Assim, podemos utilizar a amostra armazenada na variável `ind` para definir os conjuntos de teste e treinamento:
+```{r, eval=TRUE}
+iris.training <- iris[ind==1, 1:4]
+iris.test <- iris[ind==2, 1:4]
+```
+
+**Note** que, em adição, às proporções de 2/3 e 1/3 especificadas acima, você não deseja levar em conta todos os atributos para formar os conjuntos de treinamento e teste. Assim, tomamos apenas os atributos `Sepal.Length`, `Sepal.Width`, `Petal.Length` e `Petal.Width`. Isso pois, desejamos prever o quinto atributo, `Species`: nossa variável alvo. Porém, desejamos incluí-la em nosso algoritmo KNN, pois de outra maneira não haveria predições dela. Assim sendo, você precisa armazenar os rôtulos das classes nos vetores fato, dividos entre os conjuntos de treinamento e teste.
+```{r, eval=TRUE}
+iris.trainLabels <- iris[ind==1,5]
+iris.testLabels <- iris[ind==2, 5]
+```
+
+## Sexto Passo. O modelo KNN atual
+
+### Construindo noss Classificador
+
+Após todos os passo de preparação, os dados conhecidos (treinamento) estão armazenados. Porém, até o momento nenhum modelo foi executado. Então, agora temos de encontrar o *k* nearest neighbors do nosso conjunto de treinamento.
+
+Há uma forma simples de executar ambos passo utilizando a função `knn()`, que uitiliza a distância Euclidiana no intuito de encontrar os *k* nearest neighbors para nossa nova, instância desconhecida. Aqui, o parâmetro *k* é o que nós definimos. Portanto, conforme mencionando anteriormente as novas instâncias são classificadas pela observação do maior número de votos ou peso dos votos. No caso  da classificação, os pontos de dados com maiores pontuações vencem a batalha e as desconhecidas recebem os rôtulos dos vencedores. Se há uma igualdade na quantidade de vencedores, a classificação acontece de maneira aleatória.
+
+**Observe**: o parâmetro *k* é frequentemente um número ímpar, para evitar vínculos nas pontuações.
+
+Portanto, para construír seu classificador, você precisará aplicar a função `knn()` e incluir alguns argumentos, como neste exemplo:
+```{r, eval=TRUE}
+iris_pred <- knn(train = iris.training, test = iris.test, cl = iris.trainLabels, k=3)
+```
+Você armazenará na `iris_pred` o resultado da função `knn()` que recebe como argumentos o conjunto de treinamento, o conjunto teste, os rôtulos de treinamento e a quantidade de vizinhos que se deseja encontrar com esse algoritmo. Assim, o resultado dessa função é um vetor fato com as classes preditas para cada linha dos dados de teste.
+
+**Observe**: que você não deseja inserir os rôtulos de teste: estes serão utilizados para testar se seu modelo é bom na predição das classes de suas intâncias atuais!
+
+Você pode recuperar o resultado da função `knn()` digitando o seguinte comando:
+```{r, eval=TRUE}
+iris_pred
+```
+
+O resultado desse comando é um vetor fato com as classes preditas para cada linha dos dados de teste.
+
+## Sétimo passo. Avaliando seu Modelo 
+
+Um passo essencial em machine learning é a avaliação da performance do modelo. Em outras palavras, queremos análisar o grau de acertos do modelo de predição. Para uma visão mais abstrata, podemos apenas comparar os resultados da variável `iris_pred` que tiveram seus rôtulos definidos anteriomente:
+```{r, eval=TRUE, message=FALSE, echo=FALSE}
+irisTestLabels <- data.frame(iris.testLabels)
+merge <- data.frame(iris_pred, iris.testLabels)
+names(merge) <- c("Predicted Species", "Observed Species")
+merge
+```
+Podemos ver que o modelo possue uma acuracidade nas predições razoável, com a exceção de uma classificação incorreta na linha 29, onde "Versicolor" foi predita com o teste de rôtulo como "Virginica".
+
+Isso é um indicação da qualidade de performace de seu modelo, mas você pode querer ir além em sua análise. Assim para tal, podemos importar o pacote `gmodels`:
+
+```{r, eval=FALSE}
+install.packages("nome do pacote")
+```
+Caso, já tenha instalado o pacote, nas apenas entrar com o seguinte comando
+```{r, eval=TRUE}
+library(gmodels)
+```
+Então, podemos realizar uma tabulação cruzada e/ou uma tabela de contingência. Esse tipo de tabela é frequentemente utilizada para compreensão da relação existente entre duas variáveis. Em nosso caso, queremos compreender como as classes de nosso dados de teste, armazendo na `iris.testLabels` se relaciona com nosso modelo armazenado na `iris_pred`:
+```{r, eval=TRUE}
+CrossTable(x = iris.testLabels, y = iris_pred, prop.chisq=FALSE)
+```
+**Observe** que o último argumento `prop.chisq` indica que se o valor de chi-square é incluso ou não em cada celula. O chi-square é o resultado da soma de todas as contribuições de cada celula e então utilizada para decidir se a diferença entre os valores observado e esperados são significantes.
+
+Assim, dessa tabela podemos derivar o número de predições corretas e incorretas: uma instância do conjunto de teste foi rotulada como `Versicolor` pelo modelo, apesar de a flor ser da espécie `Virginica`. Isso pode ser observada na primeira linha da espécie "Virginica" na coluna `iris.testLabels`. Em todos os outros casos, as predições foram corretas. Dessa forma, podemos concluir que a performance do modelo é boa o suficiente, de maneira que não há necessidade de melhoras ao modelo.
+
+# Rumo ao Big Data
+
+O propósito deste tutorial foi apresentar o básico do algoritmo KNN de Machine Lerning com R. O conjunto de dados Iris utilizado é pequeno e possiblitou uma visão abrangente; Mas, você pode fazer muito mais do que foi apresentado! Se você experimentou o suficiente do básico apresentado neste tutorial e outros algoritmos de machine learning, e gostaria de ir além na Análise de dados com R. *[DataCamp por lhe auxíliar nos próximos passo ](https://www.datacamp.com/courses )*.
